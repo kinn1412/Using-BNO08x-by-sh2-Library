@@ -90,10 +90,10 @@ enum BusState_e {
 static bool isOpen = false;
 
 // Timer handle
-extern TIM_HandleTypeDef tim2;
+extern TIM_HandleTypeDef htim2;
 
 // I2C Peripheral, I2C1
-extern I2C_HandleTypeDef i2c;
+extern I2C_HandleTypeDef hi2c1;
 
 static volatile enum BusState_e i2cBusState;
 
@@ -234,17 +234,17 @@ static void hal_init_i2c(void)
     // Peripheral clock enable
     __HAL_RCC_I2C1_CLK_ENABLE();
 
-    i2c.Instance = I2C1;
-    i2c.Init.ClockSpeed = 400000;
-    i2c.Init.DutyCycle = I2C_DUTYCYCLE_2;
-    i2c.Init.OwnAddress1 = 0;
-    i2c.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    i2c.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
-    i2c.Init.OwnAddress2 = 0;
-    i2c.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
-    i2c.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
+    hi2c1.Instance = I2C1;
+    hi2c1.Init.ClockSpeed = 400000;
+    hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+    hi2c1.Init.OwnAddress1 = 0;
+    hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
+    hi2c1.Init.OwnAddress2 = 0;
+    hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
+    hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
 
-    HAL_I2C_Init(&i2c);
+    HAL_I2C_Init(&hi2c1);
 
     // Set Priority for I2C IRQ and enable
     HAL_NVIC_SetPriority(I2C1_EV_IRQn, 5, 0);
@@ -258,14 +258,14 @@ static void hal_init_timer(void)
     // Prescale to get 1 count per uS
     uint32_t prescaler = (uint32_t)((HAL_RCC_GetPCLK2Freq() / 1000000) - 1);
 
-    tim2.Instance = TIM2;
-    tim2.Init.Period = 0xFFFFFFFF;
-    tim2.Init.Prescaler = prescaler;
-    tim2.Init.ClockDivision = 0;
-    tim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim2.Instance = TIM2;
+    htim2.Init.Period = 0xFFFFFFFF;
+    htim2.Init.Prescaler = prescaler;
+    htim2.Init.ClockDivision = 0;
+    htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
 
-    HAL_TIM_Base_Init(&tim2);
-    HAL_TIM_Base_Start(&tim2);
+    HAL_TIM_Base_Init(&htim2);
+    HAL_TIM_Base_Start(&htim2);
 }
 
 static void hal_init_hw(void)
@@ -301,7 +301,7 @@ static void ps1(bool state)
 
 static uint32_t timeNowUs(void)
 {
-    return __HAL_TIM_GET_COUNTER(&tim2);
+    return __HAL_TIM_GET_COUNTER(&htim2);
 }
 
 static void delay_us(uint32_t t)
@@ -400,18 +400,18 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *i2c)
             case BUS_WRITING_DFU:
                 // Set up write operation
                 delay_us(I2C_WRITE_DELAY_US);
-                HAL_I2C_Master_Transmit_IT(i2c, i2cAddr, txBuf, txBufLen);
+                HAL_I2C_Master_Transmit_IT(&hi2c1, i2cAddr, txBuf, txBufLen);
                 abort = false;
                 break;
             case BUS_READING_LEN:
                 // Restart Read operation for header
-                HAL_I2C_Master_Receive_IT(i2c, i2cAddr, hdrBuf, READ_LEN);
+                HAL_I2C_Master_Receive_IT(&hi2c1, i2cAddr, hdrBuf, READ_LEN);
                 abort = false;
                 break;
             case BUS_READING_TRANSFER:
             case BUS_READING_DFU:
                 // Restart read operation for transfer
-                HAL_I2C_Master_Receive_IT(i2c, i2cAddr, rxBuf, payloadLen);
+                HAL_I2C_Master_Receive_IT(&hi2c1, i2cAddr, rxBuf, payloadLen);
                 abort = false;
                 break;
             default:
@@ -451,14 +451,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t n)
         // Read header to get payload length
         i2cRetries = 0;
         i2cBusState = BUS_READING_LEN;
-        HAL_I2C_Master_Receive_IT(&i2c, i2cAddr, hdrBuf, READ_LEN);
+        HAL_I2C_Master_Receive_IT(&hi2c1, i2cAddr, hdrBuf, READ_LEN);
     }
     else if ((busState == BUS_GOT_LEN) && (rxBufLen == 0))
     {
         // Read payload
         i2cRetries = 0;
         i2cBusState = BUS_READING_TRANSFER;
-        HAL_I2C_Master_Receive_IT(&i2c, i2cAddr, rxBuf, payloadLen);
+        HAL_I2C_Master_Receive_IT(&hi2c1, i2cAddr, rxBuf, payloadLen);
     }
     else
     {
@@ -467,23 +467,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t n)
     }
 }
 
-// Handle INTN Interrupt through STM32 HAL
-// (It, in turn, calls HAL_GPIO_EXTI_Callback, above)
-void EXTI4_IRQHandler(void)
-{
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
-}
 
 // Handle I2C1 EV IRQ, passing it to STM32 HAL library
 void I2C1_EV_IRQHandler(void)
 {
-    HAL_I2C_EV_IRQHandler(&i2c);
+    HAL_I2C_EV_IRQHandler(&hi2c1);
 }
 
 // Handle I2C1 ER IRQ, passing it to STM32 HAL library
 void I2C1_ER_IRQHandler(void)
 {
-    HAL_I2C_ER_IRQHandler(&i2c);
+    HAL_I2C_ER_IRQHandler(&hi2c1);
 }
 
 // ------------------------------------------------------------------------
@@ -557,13 +551,13 @@ static void shtp_i2c_hal_close(sh2_Hal_t *self_)
     bootn(true);
 
     // Deinit I2C peripheral
-    HAL_I2C_DeInit(&i2c);
+    HAL_I2C_DeInit(&hi2c1);
 
     // Disable interrupts
     disableInts();
 
     // Deinit timer
-    __HAL_TIM_DISABLE(&tim2);
+    __HAL_TIM_DISABLE(&htim2);
 
     isOpen = false;
 }
@@ -625,7 +619,7 @@ static int shtp_i2c_hal_read(sh2_Hal_t *self_, uint8_t *pBuffer, unsigned len, u
             i2cRetries = 0;
             rxDataReady = false;
             i2cBusState = BUS_READING_LEN;
-            HAL_I2C_Master_Receive_IT(&i2c, i2cAddr, hdrBuf, READ_LEN);
+            HAL_I2C_Master_Receive_IT(&hi2c1, i2cAddr, hdrBuf, READ_LEN);
         }
         else if ((busState == BUS_GOT_LEN) && (rxBufLen == 0))
         {
@@ -638,7 +632,7 @@ static int shtp_i2c_hal_read(sh2_Hal_t *self_, uint8_t *pBuffer, unsigned len, u
             i2cRetries = 0;
             rxDataReady = false;
             i2cBusState = BUS_READING_TRANSFER;
-            HAL_I2C_Master_Receive_IT(&i2c, i2cAddr, rxBuf, payloadLen);
+            HAL_I2C_Master_Receive_IT(&hi2c1, i2cAddr, rxBuf, payloadLen);
         }
     }
 
@@ -667,7 +661,7 @@ static int shtp_i2c_hal_write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len)
         txBufLen = len;
         memcpy(txBuf, pBuffer, len);
         delay_us(I2C_WRITE_DELAY_US);
-        HAL_I2C_Master_Transmit_IT(&i2c, i2cAddr, txBuf, txBufLen);
+        HAL_I2C_Master_Transmit_IT(&hi2c1, i2cAddr, txBuf, txBufLen);
 
         retval = len;
     }
@@ -748,10 +742,10 @@ static void bno_dfu_i2c_hal_close(sh2_Hal_t *self)
     disableInts();
 
     // Deinit I2C peripheral
-    HAL_I2C_DeInit(&i2c);
+    HAL_I2C_DeInit(&hi2c1);
 
     // Deinit timer
-    __HAL_TIM_DISABLE(&tim2);
+    __HAL_TIM_DISABLE(&htim2);
 
     isOpen = false;
 }
@@ -790,7 +784,7 @@ static int bno_dfu_i2c_hal_read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len,
             i2cRetries = 0;
             payloadLen = len;
             i2cBusState = BUS_READING_DFU;
-            HAL_I2C_Master_Receive_IT(&i2c, i2cAddr, rxBuf, payloadLen);
+            HAL_I2C_Master_Receive_IT(&hi2c1, i2cAddr, rxBuf, payloadLen);
         }
     }
 
@@ -822,7 +816,7 @@ static int bno_dfu_i2c_hal_write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len
         i2cRetries = 0;
         txBufLen = len;
         memcpy(txBuf, pBuffer, len);
-        HAL_I2C_Master_Transmit_IT(&i2c, i2cAddr, txBuf, txBufLen);
+        HAL_I2C_Master_Transmit_IT(&hi2c1, i2cAddr, txBuf, txBufLen);
 
         retval = len;
     }

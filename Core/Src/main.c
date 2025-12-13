@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stdint.h"
+#include "stdio.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "sh2.h"
@@ -292,7 +293,7 @@ static void sh2_event_cb(void *cookie, sh2_AsyncEvent_t *pEvent)
 {
     (void)cookie;
     (void)pEvent;
-    printf("SH2 event: %d\n", pEvent->eventId);
+    printf("SH2 event: %lu\n", pEvent->eventId);
 
 }
 
