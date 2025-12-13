@@ -49,7 +49,7 @@
 #define PS1_PIN  GPIO_PIN_0
 
 #define INTN_PORT GPIOB
-#define INTN_PIN GPIO_PIN_4
+#define INTN_PIN GPIO_PIN_3
 
 // Keep reset asserted this long.
 // (Some targets have a long RC decay on reset.)
@@ -128,7 +128,7 @@ static volatile bool inReset;
 static void enableInts(void)
 {
     // Enable INTN interrupt
-    HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+    HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
     // Enable I2C interrupts
     HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
@@ -142,7 +142,7 @@ static void disableInts(void)
     HAL_NVIC_DisableIRQ(I2C1_EV_IRQn);
 
     // Disable INTN interrupt line
-    HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+    HAL_NVIC_DisableIRQ(EXTI3_IRQn);
 }
 
 static void enableI2cInts(void)
@@ -214,7 +214,7 @@ static void hal_init_gpio(void)
     HAL_GPIO_Init(CLKSEL0_PORT, &GPIO_InitStruct);
 
     /* EXTI interrupt init*/
-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(EXTI3_IRQn, 5, 0);
 }
 
 static void hal_init_i2c(void)
@@ -270,7 +270,7 @@ static void hal_init_timer(void)
 
 static void hal_init_hw(void)
 {
-    hal_init_timer();
+    // hal_init_timer();
     hal_init_gpio();
     hal_init_i2c();
 }
@@ -301,7 +301,13 @@ static void ps1(bool state)
 
 static uint32_t timeNowUs(void)
 {
-    return __HAL_TIM_GET_COUNTER(&htim2);
+    uint32_t a = TIM2->CNT;
+    uint32_t b = __HAL_TIM_GET_COUNTER(&htim2);
+    volatile void *inst = (void*)htim2.Instance;   // xem nó đang trỏ tới đâu
+    volatile void *t2   = (void*)TIM2;
+
+    (void)a; (void)b; (void)inst; (void)t2;
+    return b;
 }
 
 static void delay_us(uint32_t t)
@@ -316,8 +322,8 @@ static void delay_us(uint32_t t)
 
 static void reset_delay_us(uint32_t t)
 {
-    uint32_t now = timeNowUs();
-    uint32_t start = now;
+    volatile uint32_t now = timeNowUs();
+    volatile uint32_t start = now;
     while (((now - start) < t) && (inReset))
     {
         now = timeNowUs();
