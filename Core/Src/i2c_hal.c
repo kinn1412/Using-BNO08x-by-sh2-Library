@@ -90,10 +90,10 @@ enum BusState_e {
 static bool isOpen = false;
 
 // Timer handle
-TIM_HandleTypeDef tim2;
+extern TIM_HandleTypeDef tim2;
 
 // I2C Peripheral, I2C1
-I2C_HandleTypeDef i2c;
+extern I2C_HandleTypeDef i2c;
 
 static volatile enum BusState_e i2cBusState;
 
@@ -128,7 +128,7 @@ static volatile bool inReset;
 static void enableInts(void)
 {
     // Enable INTN interrupt
-    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+    HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
     // Enable I2C interrupts
     HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
@@ -142,7 +142,7 @@ static void disableInts(void)
     HAL_NVIC_DisableIRQ(I2C1_EV_IRQn);
 
     // Disable INTN interrupt line
-    HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+    HAL_NVIC_DisableIRQ(EXTI4_IRQn);
 }
 
 static void enableI2cInts(void)
@@ -222,8 +222,8 @@ static void hal_init_i2c(void)
     GPIO_InitTypeDef GPIO_InitStruct;
 
     // Configure GPIO Pins for use with I2C
-    // PB8 : I2C1_SCL
-    // PB9 : I2C1_SDA 
+    // PB6 : I2C1_SCL
+    // PB7 : I2C1_SDA
     GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
