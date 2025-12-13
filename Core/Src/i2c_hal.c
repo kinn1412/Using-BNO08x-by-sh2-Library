@@ -469,9 +469,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t n)
 
 // Handle INTN Interrupt through STM32 HAL
 // (It, in turn, calls HAL_GPIO_EXTI_Callback, above)
-void EXTI15_10_IRQHandler(void)
+void EXTI4_IRQHandler(void)
 {
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_10);
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
 }
 
 // Handle I2C1 EV IRQ, passing it to STM32 HAL library
