@@ -67,7 +67,6 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static void bno_reset(void);
 static void sh2_sensor_cb(void *cookie, sh2_SensorEvent_t *event);
 static void sh2_event_cb(void *cookie, sh2_AsyncEvent_t *pEvent);
 
@@ -97,8 +96,8 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  MX_TIM2_Init();
-  HAL_TIM_Base_Start(&htim2);
+//  MX_TIM2_Init();
+//  HAL_TIM_Base_Start(&htim2);
 
   /* USER CODE END SysInit */
 
@@ -107,11 +106,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   sh2_Hal_t *pHal = sh2_hal_init();
 
-  bno_reset();
-
   sh2_open(pHal, sh2_event_cb, NULL);
   sh2_setSensorCallback(sh2_sensor_cb, NULL);
-
 
 
   /* USER CODE END 2 */
@@ -308,15 +304,6 @@ static void sh2_sensor_cb(void *cookie, sh2_SensorEvent_t *event)
     if (sh2_decodeSensorEvent(&value, event) == SH2_OK) {
     }
 }
-
-static void bno_reset(void)
-{
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET); // PB5 low
-    HAL_Delay(10);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);   // PB5 high
-    HAL_Delay(50);
-}
-
 
 
 /* USER CODE END 4 */

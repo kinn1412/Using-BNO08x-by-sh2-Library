@@ -31,7 +31,7 @@
 
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_tim.h"
-#include "stm32f4xx_hal_i2c.h"
+
 
 #define CLKSEL0_PORT GPIOB
 #define CLKSEL0_PIN  GPIO_PIN_8
@@ -256,13 +256,18 @@ static void hal_init_timer(void)
     __HAL_RCC_TIM2_CLK_ENABLE();
 
     // Prescale to get 1 count per uS
-    uint32_t prescaler = (uint32_t)((HAL_RCC_GetPCLK2Freq() / 1000000) - 1);
+    // uint32_t prescaler = (uint32_t)((HAL_RCC_GetPCLK2Freq() / 1000000) - 1);
 
     htim2.Instance = TIM2;
     htim2.Init.Period = 0xFFFFFFFF;
-    htim2.Init.Prescaler = prescaler;
+    htim2.Init.Prescaler = 83;
     htim2.Init.ClockDivision = 0;
     htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+    {
+    	while(1){}
+    }
 
     HAL_TIM_Base_Init(&htim2);
     HAL_TIM_Base_Start(&htim2);
@@ -270,7 +275,7 @@ static void hal_init_timer(void)
 
 static void hal_init_hw(void)
 {
-    // hal_init_timer();
+    hal_init_timer();
     hal_init_gpio();
     hal_init_i2c();
 }
@@ -301,13 +306,7 @@ static void ps1(bool state)
 
 static uint32_t timeNowUs(void)
 {
-    uint32_t a = TIM2->CNT;
-    uint32_t b = __HAL_TIM_GET_COUNTER(&htim2);
-    volatile void *inst = (void*)htim2.Instance;   // xem nó đang trỏ tới đâu
-    volatile void *t2   = (void*)TIM2;
-
-    (void)a; (void)b; (void)inst; (void)t2;
-    return b;
+    return __HAL_TIM_GET_COUNTER(&htim2);
 }
 
 static void delay_us(uint32_t t)
@@ -322,9 +321,9 @@ static void delay_us(uint32_t t)
 
 static void reset_delay_us(uint32_t t)
 {
-    volatile uint32_t now = timeNowUs();
-    volatile uint32_t start = now;
-    while (((now - start) < t) && (inReset))
+    uint32_t now = timeNowUs();
+    uint32_t start = now;
+    while (((now - start) < t) && (!inReset))
     {
         now = timeNowUs();
     }
